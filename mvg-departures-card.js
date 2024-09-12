@@ -1,5 +1,6 @@
 import {
   css,
+  unsafeCSS,
   LitElement,
   html,
 } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
@@ -25,12 +26,10 @@ class DepartureBadge extends LitElement {
         padding-right: 0.5rem;
         font-size: 1.0rem;
         align-items: center;
-        min-width: 190px;
-        max-width: 220px;
         margin-bottom: 1rem;
         border-style: solid;
         border-width: 1px;
-        border-color: var(--divider-color);
+        border-color: var(--departure-line-color);
       }
       .line {
         color: white;
@@ -42,7 +41,6 @@ class DepartureBadge extends LitElement {
         font-weight: bold;
       }
       .destination {
-        margin-left: 0.5rem;
         margin-right: 1rem;
         text-overflow: ellipsis;
         overflow: hidden;
@@ -52,15 +50,18 @@ class DepartureBadge extends LitElement {
         margin-left: auto;
         text-wrap: nowrap;
       }
+      .minutes-label {
+        padding-left: 0.2rem;
+        font-size: 0.75rem;
+      }
     `
   }
   
   render() {
     return html`
       <div class="badge">
-        <div class="line">${this.line}</div>
         <div class="destination">${this.destination}</div>
-        <div class="minutes">${this.minutes} Min.</div>
+        <div class="minutes">${this.minutes}<span class="minutes-label">min</span></div>
       </div>
     `
   }
@@ -89,23 +90,32 @@ class DeparturesCard extends LitElement {
 
   static get styles() {
     return css`
-      :host {
+      ha-card {
         width: 100%;
+        height: 100%;
+      }
+      .card-content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
       }
       .departures-overview {
         display: flex;
         flex-flow: row;
-        justify-content: center;
+        justify-content: space-between;
+        margin-bottom: auto;
       }
       .departure-container {
         display: flex;
         flex-flow: column;
+        width: 48.5%;
       }
       .arrow-container {
         display: flex;
         align-items: center;
         position: relative;
-        gap: 1.5rem;
+        gap: 0.5rem;
       }
 
       .arrow {
@@ -117,7 +127,9 @@ class DeparturesCard extends LitElement {
         bottom: 0;
         left: 0;
         right: 0;
-        margin: auto 0;
+        margin-left: 0px;
+        margin-right: 0px;
+        margin-top: 0.75rem;
       }
 
       .arrow::before, .arrow::after {
@@ -162,7 +174,6 @@ class DeparturesCard extends LitElement {
         align-items: center;
         color: var(--primary-text-color);
         flex-flow: column;
-        margin-top: 1.85rem;
         position: relative;
         gap: 0.5rem;
         flex-grow: 1;
@@ -182,21 +193,29 @@ class DeparturesCard extends LitElement {
       display: block;
       background-color: var(--secondary-background-color);
       border-style: solid;
-      border-width: 3px;
+      border-width: 2px;
       border-color: var(--primary-text-color);
       border-radius: 50%;
     }
 
     .dot.small::before {
-        width: 20px;
-        height: 20px;
+        width: 15px;
+        height: 15px;
     }
 
     .dot.large::before {
-        width: 35px;
-        height: 35px;
+        width: 25px;
+        height: 25px;
     }
     `;
+  }
+
+  filterDeparturesBasedOnDesinations(departures, destinations) {
+    return departures.filter((departure) => destinations.includes(departure.destination))
+  }
+
+  filterDeparturesBasedOnPlatform(departures, platform) {
+    return departures.filter((departure) => departure.platform == platform)
   }
 
   render() {
@@ -206,25 +225,26 @@ class DeparturesCard extends LitElement {
     if (state ){
       departures = state.attributes.departures;
     }
+    console.log(state)
 
-    const departuresLeft = departures.filter((departure) => this.config.directions.left.destinations.includes(departure.destination)).slice(0, 2)
-    const departuresRight = departures.filter((departure) => this.config.directions.right.destinations.includes(departure.destination)).slice(0, 2)
-    const unmatched = departures.filter((departure) => !this.config.directions.left.destinations.includes(departure.destination) && !this.config.directions.right.destinations.includes(departure.destination))
+    const departuresLeft = this.config.directions.left.destinations !== undefined ? this.filterDeparturesBasedOnDesinations(departures, this.config.directions.left.destinations) : this.filterDeparturesBasedOnPlatform(departures, this.config.directions.left.platform)
+    const departuresRight = this.config.directions.right.destinations !== undefined ? this.filterDeparturesBasedOnDesinations(departures, this.config.directions.right.destinations) : this.filterDeparturesBasedOnPlatform(departures, this.config.directions.right.platform)
+    const unmatched = departures.filter((departure) => !departuresLeft.includes(departure) && !departuresRight.includes(departure))
     return html`
     <ha-card>
       <div class="card-content">
       <div class="departures-overview">
-        <div class="departure-container" style="margin-right: auto;">
-          ${departuresLeft.map((departure) => {
+        <div class="departure-container">
+          ${departuresLeft.slice(0, 2).map((departure) => {
             return html`
-              <mvg-departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.time_in_mins}'/>
+              <departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.time_in_mins}'/>
             `
           })}
         </div>
         <div class="departure-container">
-        ${departuresRight.map((departure) => {
+        ${departuresRight.slice(0, 2).map((departure) => {
           return html`
-            <mvg-departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.time_in_mins}'/>
+            <departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.time_in_mins}'/>
           `
         })}
         
@@ -250,7 +270,7 @@ class DeparturesCard extends LitElement {
             <h3>Derzeit nicht berücksichtigt</h3>
              ${unmatched.map((departure) => {
               return html`
-                <mvg-departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.time_in_mins}'/>
+                <departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.time_in_mins}'/>
               `
              }
              )}
@@ -264,5 +284,5 @@ class DeparturesCard extends LitElement {
   }
 }
 
-customElements.define("mvg-departure-badge", DepartureBadge)
+customElements.define("departure-badge", DepartureBadge)
 customElements.define("mvg-departures-card", DeparturesCard)

@@ -4,10 +4,12 @@ A Home-Assistant card to show departures for MVG:
 
 ![example screenshot](screenshot.png)
 
+Uses the [Home-Assistant MVG Integration](https://github.com/danielpotthast/mvg/tree/main).
+
 # Example
 
 ```yaml
-
+# file: configuration.yaml
 lovelace:
   mode: yaml
   resources:
