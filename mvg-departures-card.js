@@ -1,6 +1,5 @@
 import {
   css,
-  unsafeCSS,
   LitElement,
   html,
 } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
@@ -11,6 +10,7 @@ class DepartureBadge extends LitElement {
       line: {type: String},
       destination: {type: String},
       minutes: {type: Number},
+      cancelled: {type: Boolean}
     }
   }
 
@@ -46,6 +46,11 @@ class DepartureBadge extends LitElement {
         overflow: hidden;
         text-wrap: nowrap;
       }
+
+      .destination[cancelled] {
+        text-decoration: line-through;
+      }
+      
       .minutes {
         margin-left: auto;
         text-wrap: nowrap;
@@ -60,7 +65,7 @@ class DepartureBadge extends LitElement {
   render() {
     return html`
       <div class="badge">
-        <div class="destination">${this.destination}</div>
+        <div class="destination" ?cancelled=${this.cancelled}>${this.destination}</div>
         <div class="minutes">${this.minutes}<span class="minutes-label">min</span></div>
       </div>
     `
@@ -75,6 +80,17 @@ class DeparturesCard extends LitElement {
     }  
     this.config = config
     this.style.setProperty('--departure-line-color', this.config.line_color)
+    this.disableWarning()
+  }
+
+  enableWarning() {
+    this.warning = true;
+    this.style.setProperty('--warning', null)
+  }
+
+  disableWarning() {
+    this.warning = false
+    this.style.setProperty('--warning', "''")
   }
   
   getCardSize() {
@@ -152,61 +168,65 @@ class DeparturesCard extends LitElement {
         right: -0.5rem;
       }
 
-    .left-group, .right-group {
-      display: flex;
-      gap: 10px;
-      flex-grow: 1;
-      flex-basis: 0;
-    }
-
-    .right-group {
-      justify-content: flex-end; /* Align left group to the right */
-      margin-right: auto; /* Push the center box to the center */
-    }
-
-    .left-group {
-      justify-content: flex-start; /* Align right group to the left */
-      margin-left: auto; /* Push the center box to the center */
-      
-    }
-    .dot {
-        display: inline-flex;
-        align-items: center;
-        color: var(--primary-text-color);
-        flex-flow: column;
-        position: relative;
-        gap: 0.5rem;
+      .left-group, .right-group {
+        display: flex;
+        gap: 10px;
         flex-grow: 1;
-    }
+        flex-basis: 0;
+      }
 
-    .dot.large {
-      flex-grow: 0;
-      font-weight: bold;
-    }
+      .right-group {
+        justify-content: flex-end; /* Align left group to the right */
+        margin-right: auto; /* Push the center box to the center */
+      }
 
-    .dot.small {
-      font-size: 0.75rem;
-    }
+      .left-group {
+        justify-content: flex-start; /* Align right group to the left */
+        margin-left: auto; /* Push the center box to the center */
+      
+      }
+      .dot {
+          display: inline-flex;
+          align-items: center;
+          color: var(--primary-text-color);
+          flex-flow: column;
+          position: relative;
+          gap: 0.5rem;
+          flex-grow: 1;
+      }
 
-    .dot::before {
-      content: '';
-      display: block;
-      background-color: var(--secondary-background-color);
-      border-style: solid;
-      border-width: 2px;
-      border-color: var(--primary-text-color);
-      border-radius: 50%;
-    }
+      .dot.large {
+        flex-grow: 0;
+        font-weight: bold;
+      }
 
-    .dot.small::before {
-        width: 15px;
-        height: 15px;
-    }
+      .dot.small {
+        font-size: 0.75rem;
+      }
 
-    .dot.large::before {
+      .dot::before {
+        content: '';
+        display: block;
+        background-color: var(--secondary-background-color);
+        border-style: solid;
+        border-width: 2px;
+        border-color: var(--primary-text-color);
+        border-radius: 50%;
+      }
+
+      .dot.small::before {
+          width: 15px;
+          height: 15px;
+      }
+
+      .dot.large::before {
+        content: var(--warning, '!');
         width: 25px;
         height: 25px;
-    }
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
     `;
   }
 
@@ -225,11 +245,19 @@ class DeparturesCard extends LitElement {
     if (state ){
       departures = state.attributes.departures;
     }
-    console.log(state)
 
     const departuresLeft = this.config.directions.left.destinations !== undefined ? this.filterDeparturesBasedOnDesinations(departures, this.config.directions.left.destinations) : this.filterDeparturesBasedOnPlatform(departures, this.config.directions.left.platform)
     const departuresRight = this.config.directions.right.destinations !== undefined ? this.filterDeparturesBasedOnDesinations(departures, this.config.directions.right.destinations) : this.filterDeparturesBasedOnPlatform(departures, this.config.directions.right.platform)
     const unmatched = departures.filter((departure) => !departuresLeft.includes(departure) && !departuresRight.includes(departure))
+    const anyCancelled = departures.some((departure) => departure.cancelled )
+    if (unmatched.length > 0 || anyCancelled) {
+      if (!this.warning) {
+        unmatched.length > 0 ? console.log(`There are unmatched departures for ${entityId}: ${JSON.stringify(unmatched)}`) : null
+        this.enableWarning()
+      }
+    } else {
+      if (this.warning) this.disableWarning()
+    }
     return html`
     <ha-card>
       <div class="card-content">
@@ -237,14 +265,14 @@ class DeparturesCard extends LitElement {
         <div class="departure-container">
           ${departuresLeft.slice(0, 2).map((departure) => {
             return html`
-              <departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.time_in_mins}'/>
+              <departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.time_in_mins}' ?cancelled='${departure.cancelled}'/>
             `
           })}
         </div>
         <div class="departure-container">
         ${departuresRight.slice(0, 2).map((departure) => {
           return html`
-            <departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.time_in_mins}'/>
+            <departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.time_in_mins}' ?cancelled='${departure.cancelled}'/>
           `
         })}
         
@@ -264,19 +292,6 @@ class DeparturesCard extends LitElement {
           })}
         </div>
       </div>
-      ${unmatched.length == 0 ? null : 
-        html`
-          <div>
-            <h3>Derzeit nicht berücksichtigt</h3>
-             ${unmatched.map((departure) => {
-              return html`
-                <departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.time_in_mins}'/>
-              `
-             }
-             )}
-          </div>
-        `
-      }
       </div>
     </ha-card>
 
