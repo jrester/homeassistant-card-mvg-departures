@@ -242,7 +242,7 @@ class DeparturesCard extends LitElement {
     const entityId = this.config.entity;
     const state = this.hass.states[entityId];
     let departures = []
-    if (state ){
+    if (state && state.attributes.departures){
       departures = state.attributes.departures;
     }
 
