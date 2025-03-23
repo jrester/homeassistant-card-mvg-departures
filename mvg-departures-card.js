@@ -2,7 +2,7 @@ import {
   css,
   LitElement,
   html,
-} from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
+} from "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js";
 
 class DepartureBadge extends LitElement {
   static get properties() {
