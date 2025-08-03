@@ -265,14 +265,14 @@ class DeparturesCard extends LitElement {
         <div class="departure-container">
           ${departuresLeft.slice(0, 2).map((departure) => {
             return html`
-              <departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.time_in_mins}' ?cancelled='${departure.cancelled}'/>
+              <departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.real}' ?cancelled='${departure.cancelled}'/>
             `
           })}
         </div>
         <div class="departure-container">
         ${departuresRight.slice(0, 2).map((departure) => {
           return html`
-            <departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.time_in_mins}' ?cancelled='${departure.cancelled}'/>
+            <departure-badge line=${departure.line} destination=${departure.destination} minutes='${departure.real}' ?cancelled='${departure.cancelled}'/>
           `
         })}
         
